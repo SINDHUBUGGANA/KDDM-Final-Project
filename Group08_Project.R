@@ -8,6 +8,8 @@ library(class)
 library(ada)
 library(e1071)
 library(gbm)
+library(reshape2)
+library(rpart.plot)
 rm(list = ls())
 
 my_data <- read.csv("ObesityDataSet_raw_and_data_sinthetic.csv", stringsAsFactors = F)
@@ -20,6 +22,21 @@ table(my_data$SMOKE)
 table(my_data$family_history_with_overweight)
 table(my_data$CAEC)
 table(my_data$MTRANS)
+table(my_data$NObeyesdad)
+
+par(mfrow=c(2, 2))
+barplot(table(my_data$Gender), main="Gender distribution")
+barplot(table(my_data$family_history_with_overweight), main="Family History with Overweight")
+barplot(table(my_data$CALC), main="Alcohol Consumption")
+barplot(table(my_data$SMOKE), main="Smokes Or Not")
+
+barplot(table(my_data$SCC), main="Monitor Calories")
+barplot(table(my_data$CAEC), main="Food between Meals")
+barplot(table(my_data$MTRANS), main="Mode of Transportation?")
+barplot(table(my_data$FAVC), main="Frequent High Caloric Food")
+
+par(mfrow=c(1, 1))
+barplot(table(my_data$NObeyesdad), main="Obesity")
 
 change_cols <- c("FAVC", "SCC", "SMOKE", "family_history_with_overweight")
 
@@ -61,6 +78,8 @@ for (i in 1:nrow(my_data)) {
 }
 my_data$Obesity <- as.factor(my_data$Obesity)
 my_data$CALC <- as.factor(my_data$CALC)
+
+barplot(table(my_data$Obesity), main="Updated Obesity")
 
 my_data <- my_data[, -c(3,4,17)]
 col_names <- c("Age", "Gender", "Alcohol", "Calorie_food", "Veggies", "Num_meals",
@@ -110,6 +129,21 @@ print(paste("F1-score:", f1_score))
 print(paste("Sensitivity:", sensitivity))
 print(paste("Specificity:", specificity))
 stats_knn <- c(accuracy, precision, recall, f1_score, sensitivity, specificity)
+
+# Predict probabilities for test dataset
+knn_prob <- predict(final_model, newdata = test_dataset, type = "prob")
+
+# Create a prediction object
+knn_pred <- prediction(knn_prob[, "1"], test_dataset$Obesity)
+
+# Create performance object
+knn_perf <- performance(knn_pred, "tpr", "fpr")
+
+# Plot ROC curve
+plot(knn_perf, main = "ROC Curve for k-Nearest Neighbors (KNN) Model", col = "red", lwd = 2)
+
+# Add diagonal reference line
+abline(a = 0, b = 1, col = "blue")
 
 #### ######### logistic regrssion #########################
 model <- glm(Obesity ~.,family=binomial,data=train_dataset)
@@ -164,11 +198,25 @@ print(paste("Sensitivity:", sensitivity))
 print(paste("Specificity:", specificity))
 stats_rf <- c(accuracy, precision, recall, f1_score, sensitivity, specificity)
 
+# Predict probabilities for test dataset
+rf_prob <- predict(rf_classifier, newdata = test_dataset, type = "prob")
+
+# Create a prediction object
+rf_pred <- prediction(rf_prob[, "1"], test_dataset$Obesity)
+
+# Create performance object
+rf_perf <- performance(rf_pred, "tpr", "fpr")
+
+# Plot ROC curve
+plot(rf_perf, main = "ROC Curve for Random Forest Classifier", col = "green", lwd = 2)
+
+# Add diagonal reference line
+abline(a = 0, b = 1, col = "blue")
+
 ################## ada boost ###################################
 
-model <- ada(Obesity ~ ., data = train_dataset)
-predictions <- predict(model, newdata = test_dataset[,-15])
-predictions
+ada_model <- ada(Obesity ~ ., data = train_dataset)
+predictions <- predict(ada_model, newdata = test_dataset[,-15])
 
 conf_matrix <- confusionMatrix(predictions, test_dataset$Obesity)
 print(conf_matrix)
@@ -185,6 +233,21 @@ print(paste("F1-score:", f1_score))
 print(paste("Sensitivity:", sensitivity))
 print(paste("Specificity:", specificity))
 stats_ada <- c(accuracy, precision, recall, f1_score, sensitivity, specificity)
+
+# Predict probabilities for test dataset
+ada_prob <- predict(ada_model, newdata = test_dataset, type = "prob")
+
+# Extract the probability column from ada_prob
+ada_pred <- prediction(ada_prob[, 2], test_dataset$Obesity)
+
+# Create performance object
+ada_perf <- performance(ada_pred, "tpr", "fpr")
+
+# Plot ROC curve
+plot(ada_perf, main = "ROC Curve for AdaBoost Classifier", col = "red", lwd = 2)
+
+# Add diagonal reference line
+abline(a = 0, b = 1, col = "blue")
 
 ### Naive Bayes ##############
 
@@ -210,6 +273,20 @@ print(paste("Sensitivity:", sensitivity))
 print(paste("Specificity:", specificity))
 stats_naive <- c(accuracy, precision, recall, f1_score, sensitivity, specificity)
 
+# Predict probabilities for test dataset
+nb_prob <- predict(nb_model, newdata = test_dataset[,-15], type = "raw")
+
+# Create a prediction object
+nb_pred <- prediction(nb_prob[, "1"], test_dataset$Obesity)
+
+# Create performance object
+nb_perf <- performance(nb_pred, "tpr", "fpr")
+
+# Plot ROC curve
+plot(nb_perf, main = "ROC Curve for Naive Bayes Classifier", col = "green", lwd = 2)
+
+# Add diagonal reference line
+abline(a = 0, b = 1, col = "blue")
 
 ###### Gradient Boost ################
 gbm_fit <- gbm(Obesity ~ ., data = train_dataset,
@@ -237,6 +314,21 @@ print(paste("F1-score:", f1_score))
 print(paste("Sensitivity:", sensitivity))
 print(paste("Specificity:", specificity))
 stats_gb<- c(accuracy, precision, recall, f1_score, sensitivity, specificity)
+
+# Assuming "1" corresponds to the "Obese" class, and "0" corresponds to the "Non-Obese" class
+gbm_pred_probs_class_1 <- gbm_pred_probs[, 2, "150"]  # Extract probabilities for class "1" (Obese)
+
+# Create prediction object
+gbm_pred <- prediction(gbm_pred_probs_class_1, test_dataset$Obesity)
+
+# Create performance object
+gbm_perf <- performance(gbm_pred, "tpr", "fpr")
+
+# Plot ROC curve
+plot(gbm_perf, main = "ROC Curve for Gradient Boosting Classifier", col = "purple", lwd = 2)
+
+# Add diagonal reference line
+abline(a = 0, b = 1, col = "blue")
 
 ########## CART ##############################################
 
@@ -301,22 +393,35 @@ cat("CART F1-score:", f1_score, "%\n")
 plot(cart_model, margin = 0.1)
 text(cart_model, use.n = TRUE, cex = 0.6)
 
+# Plot feature importance graph
+rpart.plot(cart_model, extra = 104, under = TRUE, cex = 0.8)
+
 stats_cart<- c(accuracy, precision, recall, f1_score, sensitivity, specificity)
 
-############# SVM ##############################
+# Get predicted probabilities for class 1
+predicted_probabilities <- predict(cart_model, test_dataset, type = "prob")[, "1"]
 
-library(ggplot2)
-library(dplyr)
-library(stringr)
-library(reshape2)
+# Create a prediction object
+cart_pred <- prediction(predicted_probabilities, test_dataset$Obesity)
+
+# Create performance object
+cart_perf <- performance(cart_pred, "tpr", "fpr")
+
+# Plot ROC curve
+plot(cart_perf, main = "ROC Curve for CART Classifier", col = "blue", lwd = 2)
+
+# Add diagonal reference line
+abline(a = 0, b = 1, col = "red")
+
+############# SVM ##############################
 
 svm <- svm(Obesity ~ ., data = train_dataset, kernel = "linear")
 
 # Make predictions on the testing set
-predictions <- predict(svm, newdata = test_dataset)
+predictions <- predict(svm, newdata = test_dataset[,-15])
 
 # Evaluate the performance of the SVM model
-confusion_matrix <- table(predictions, test_dataset$Obesity) * 100
+confusion_matrix <- table(predictions, test_dataset$Obesity)
 print(confusion_matrix)
 accuracy <- sum(diag(confusion_matrix)) / sum(confusion_matrix)
 precision <- confusion_matrix[2, 2] / sum(confusion_matrix[, 2])
@@ -339,7 +444,24 @@ cat("SVM F1-score:", f1_score, "\n")
 cat("SVM Sensitivity:", sensitivity, "\n")
 cat("SVM Specificity:", specificity, "\n")
 
+# Train the SVM model with probability estimates
+svm <- svm(Obesity ~ ., data = train_dataset, kernel = "linear", probability = TRUE)
 
+# Make predictions on the testing set with probability estimates
+predictions_prob <- predict(svm, newdata = test_dataset, probability = TRUE)
+
+# Extract probabilities for the positive class
+predictions_prob <- attr(predictions_prob, "probabilities")[, 2]
+
+# Create prediction object
+pred <- prediction(predictions_prob, test_dataset$Obesity)
+
+# Create performance object
+perf <- performance(pred, "tpr", "fpr")
+
+# Plot ROC curve
+plot(perf, main = "ROC Curve for SVM Model", col = "blue", lwd = 2)
+abline(a = 0, b = 1, lty = 2, col = "red")
 
 # Convert confusion matrix to data frame
 confusion_matrix_df <- as.data.frame(confusion_matrix)
@@ -358,7 +480,7 @@ colnames(confusion_matrix_melted)
 str(confusion_matrix_melted)
 
 # Convert Gender to numeric
-train_data$Gender <- as.numeric(train_data$Gender)
+train_dataset$Gender <- as.numeric(train_dataset$Gender)
 
 
 # Calculate feature importance
@@ -397,10 +519,6 @@ accuracy_data$Algorithm <- c("KNN", "Logistic Regression", "Random Forest", "Ada
                           "Gradient Boost", "CART", "SVM")
 
 #accuracy_data <- as.data.frame(t(accuracy_data))
-
-ggplot(accuracy_data, aes(x = Algorithm, y = Accuracy, color = Algorithm)) + geom_boxplot(coef = 5) + 
-  ggtitle ("Accuracy Comparison of Different Algorithms") + 
-  theme(plot.title = element_text(hjust = 0.5))
 color_palette <- c("#1f77b4", "#ff7f0e", "#2ca02c", "#d62728", "#9467bd", "#8c564b", "#e377c2", "#7f7f7f")
 
 
