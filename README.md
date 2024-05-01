@@ -1,9 +1,11 @@
 # KDDM-Final-Project
 classification problem
 
-Steps:
-0) git pull - download any updates from the repository
-1) Edit the code, compile it, test it, etc., until you're happy with it.
-2) git add (filename) - stages the changes to be committed, replace filename with main.cc or whatever file it is you edited. Or "git add ." to do all of them.
-3) git commit -m "commit message" - Replace commit message with a description of the changes you made
-4) git push - uploads the changes to the repository
+This research introduces a sophisticated machine learning framework designed specifically for obesity classification, addressing a critical global health issue. 
+
+The importance of early detection and intervention is paramount to reduce the adverse impacts of obesity on individual health and healthcare systems. The framework utilizes a detailed approach, incorporating multiple machine learning techniques to improve accuracy and reliability in obesity prediction.
+
+Aims to facilitate early obesity detection and craft personalized intervention strategies, contributing to broader public health initiatives focused on obesity prevention and management.
+
+By harnessing a diverse set of machine learning algorithms and ensemble methods, this research contributes significantly to developing an effective obesity classification system, supporting global efforts to mitigate obesity-related health risks and promote healthier lifestyles.
+
